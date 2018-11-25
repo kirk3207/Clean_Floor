@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1542995316 source:d:\program files\codeblocks\projects\nthu\floor_cleaning\floor_cleaning.cpp
+	<iostream>
+	<fstream>
+	<stack>
+	<queue>
+	<string>
+	<sstream>
+
