@@ -1,123 +1,168 @@
 #include<iostream>
 #include<fstream>
 #include<stack>
+#include<queue>
 #include<string>
 #include<sstream>
 using namespace std;
 
 int row, col, battery;
 int BatteryRow, BatteryCol;
+int BatteryNum;
+int step=0;
 char matrix[1000][1000];
-int numOfFloor, toBeCleaned =0;
-stack<string> trail;
+int transMatrix[1000][1000];
+int adj[1000][1000]={0};
+int d[1000];
+bool visit[1000]={false};
+int parent[1000];
+string Location[1000];
+int numOfVertex=0;
+stack<int> trail;
 int RobotRow,RobotCol,RobotBattery;
 
-void goBack(int RobotRow,int RobotCol)
+void initDistance()
 {
-        for(int i=0;i<trail.size();i++)
+        for(int i=0;i<1000;i++)
         {
-                cout<<trail.top()<<endl;
-                trail.pop();
+                d[i]=10000;
         }
-}
-
-void goRight()
-{
-        ++RobotCol;
-        matrix[RobotRow][RobotCol] = 'F';
-        RobotBattery--;
-        trail.push("Right");
-        toBeCleaned--;
-        cout<<toBeCleaned<<endl;
-        cout<<RobotRow<<" "<<RobotCol<<endl;
-        return;
-}
-void goUp()
-{
-        --RobotRow;
-        matrix[RobotRow][RobotCol] = 'F';
-        RobotBattery--;
-        trail.push("Up");
-        toBeCleaned--;
-        cout<<toBeCleaned<<endl;
-        cout<<RobotRow<<" "<<RobotCol<<endl;
-        return;
-}
-void goLeft()
-{
-        --RobotCol;
-        matrix[RobotRow][RobotCol] = 'F';
-        RobotBattery--;
-        trail.push("Left");
-        toBeCleaned--;
-        cout<<toBeCleaned<<endl;
-        cout<<RobotRow<<" "<<RobotCol<<endl;
-        return;
-}
-void goDown()
-{
-        ++RobotRow;
-        matrix[RobotRow][RobotCol] = 'F';
-        RobotBattery--;
-        trail.push("Down");
-        toBeCleaned--;
-        cout<<toBeCleaned<<endl;
-        cout<<RobotRow<<" "<<RobotCol<<endl;
-        return;
-}
-//direction function end
-bool RightWall()
-{
-        if(matrix[RobotRow][RobotCol+1]=='1')
+        for(int i=1;i<=numOfVertex;i++)
         {
-                return true;
-        }
-        else return false;
-}
-void Sweep()
-{
-        while(toBeCleaned!=0)
-        {
-                if(matrix[RobotRow][RobotCol+1]=='0')//右邊還沒清
-                {
-                        goRight();
-                }
+                if(i==BatteryNum);
                 else
                 {
-                        if(matrix[RobotRow-1][RobotCol]=='0')
+                        if(adj[i][BatteryNum])
                         {
-                                goUp();
+                                d[i] = 1;
                         }
-                        else
+                }
+        }
+        return;
+}
+
+void Dijkstra(int source)
+{
+        for(int i=1;i<=numOfVertex;i++)
+        {
+                visit[i]=false;
+        }
+        initDistance();
+        d[source]=0;
+        for(int i=1;i<=numOfVertex;i++)
+        {
+                cout<<d[i]<<" ";
+        }
+        parent[source] = source;
+
+        for(int k=1;k<=numOfVertex;k++)
+        {
+                int a=-1, b=-1, Min = 10000;
+                for(int i=1;i<=numOfVertex;i++)
+                {
+                        if(!visit[i] && d[i] < Min)
                         {
-                                if(matrix[RobotRow][RobotCol-1]=='0')
+                                a = i;
+                                Min = d[i];
+                        }
+                }
+                if(a == -1) break;
+
+                visit[a] = true;
+
+                for(int b=1;b<=numOfVertex;b++)
+                {
+                        if(!visit[b] && (d[a] + adj[a][b]) < d[b])
+                        {
+                                cout<<"Hello"<<endl;
+                                d[b] = d[a] + adj[a][b];
+                                parent[b] = a;
+                        }
+                }
+        }
+}
+
+void find_path(int x)   // 印出由起點到x點的最短路徑
+{
+    if (x != parent[x]) // 先把之前的路徑都印出來
+        find_path(parent[x]);
+    cout << Location[x] << endl;  // 再把現在的位置印出來
+}
+
+void goBack()
+{
+        while(!trail.empty())
+        {
+                        cout<<Location[trail.top()]<<endl;
+                        trail.pop();
+                        step++;
+        }
+        RobotBattery = battery;
+        cout<<RobotRow<<" "<<RobotCol<<endl;
+        step++;
+        return;
+}
+
+void initAdj()
+{
+        for(int i=0;i<numOfVertex;i++)
+        {
+                for(int j=0;j<numOfVertex;j++)
+                {
+                        adj[i][j] = 10000;
+                }
+        }
+        return ;
+}
+
+void BuildAdj()
+{
+        for(int i=0;i<row;i++)
+        {
+                for(int j=0;j<col;j++)
+                {
+                        if(transMatrix[i][j]!=0)
+                        {
+                                if(transMatrix[i][j+1]!=0)
                                 {
-                                        goLeft();
+                                        adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
                                 }
-                                else
+                                if(transMatrix[i][j-1]!=0)
                                 {
-                                        if(matrix[RobotRow+1][RobotCol]=='0')
-                                        {
-                                                goDown();
-                                        }
-                                        else
-                                        {
-                                                cout<<" 哈囉"<<endl;
-                                                break;
-                                        }
+                                        adj[transMatrix[i][j]][transMatrix[i][j-1]]=1;
+                                }
+                                if(transMatrix[i+1][j]!=0)
+                                {
+                                        adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                                }
+                                if(transMatrix[i-1][j]!=0)
+                                {
+                                        adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
                                 }
                         }
                 }
         }
-
+        /*for(int i=1;i<=numOfVertex;i++)
+        {
+                for(int j=1;j<numOfVertex;j++)
+                {
+                        if(i==j)
+                        {
+                                adj[i][j]=0;
+                        }
+                }
+        }*/
 }
+
 
 int main()
 {
     ifstream fin;
     ofstream fout;
+    stringstream s;
+    string location;
     fin.open("floor.txt");
-    fout.open("final.path");
+    fout.open("final.path",ios::out);
     fin>>row>>col>>battery;
     for(int i=0;i<row;i++)
     {
@@ -126,33 +171,60 @@ int main()
             fin>>matrix[i][j];
             if(matrix[i][j]=='R')
             {
+                    transMatrix[i][j]=++numOfVertex;
+                    BatteryNum = numOfVertex;
                     BatteryRow = i;
                     BatteryCol = j;
+                    s.str("");
+                    s.clear();
+                    s<<i<<" "<<j;
+                    location = s.str();
+                    Location[numOfVertex]=location;
+            }
+            else if(matrix[i][j]=='1')
+            {
+                    transMatrix[i][j]=0 ;
             }
             else if(matrix[i][j]=='0')
             {
-                    numOfFloor ++;
+                    transMatrix[i][j]=++numOfVertex;
+                    s.str("");
+                    s.clear();
+                    s<<i<<" "<<j;
+                    location = s.str();
+                    Location[numOfVertex]=location;
             }
-            fout<<matrix[i][j]<<" ";
+            //fout<<matrix[i][j]<<" ";
         }
-        fout<<endl;
+        //fout<<endl;
     }
-    toBeCleaned = numOfFloor;
+
+
     RobotRow = BatteryRow;
     RobotCol = BatteryCol;
     RobotBattery = battery;
     fin.close();
-    //matrix建立完畢
+    //matrix finish
     fout.close();
-    Sweep();
-    for(int i=0;i<row;i++)
+    initAdj();
+    BuildAdj();
+    Dijkstra(BatteryNum);
+    cout<<BatteryNum<<endl;
+    find_path(1);
+
+    for(int i=1;i<=numOfVertex;i++)
     {
-        for(int j=0;j<col;j++)
+            cout<<d[i]<<" ";
+    }
+    cout<<endl;
+    /*for(int i=1;i<=numOfVertex;i++)
+    {
+        for(int j=1;j<=numOfVertex;j++)
         {
-            cout<<matrix[i][j]<<" ";
+                cout<<adj[i][j]<<" ";
         }
         cout<<endl;
-    }
+    }*/
     cout<<"finish"<<endl;
     return 0;
 }
