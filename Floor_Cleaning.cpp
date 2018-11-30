@@ -11,15 +11,19 @@ int BatteryRow, BatteryCol;
 int BatteryNum;
 int step=0;
 char input;
+int position;
 int transMatrix[2000][2000];
-int adj[20000][20000];
-int d[2000];
-bool visit[2000]= {false};
-bool Clean[2000]= {false};
-int parent[2000];
+//int adj[1000][10000];
+int adj[1000000][4];
+int ruld[1000000][4];
+int d[1000000];
+bool visit[1000000]= {false};
+bool Clean[1000000]= {false};
+int parent[1000000];
 string Location[1000000];
 int numOfVertex=0;
 stack<int> trail;
+stack<int> s;
 int RobotRow,RobotCol,RobotBattery;
 ifstream fin;
 ofstream fout;
@@ -39,18 +43,26 @@ void initDistance()
     {
         d[i]=1000000;
     }
-    for(int i=1; i<=numOfVertex; i++)
+    for(int i=0; i<4; i++)
     {
-        if(i==BatteryNum);
-        else
+        if(ruld[BatteryNum][i]!=-1)
         {
-            if(adj[BatteryNum][i]!=1000000)
-            {
-                d[i] = 1;
-            }
+            d[ruld[BatteryNum][i]] = 1;
         }
     }
     return;
+}
+
+int dist(int a,int b)
+{
+    for(int i=0;i<4;i++)
+    {
+        if(ruld[a][i]==b)
+        {
+            return 1;
+        }
+    }
+    return 1000000;
 }
 
 void Dijkstra(int source)
@@ -84,24 +96,49 @@ void Dijkstra(int source)
 
         for(int b=1; b<=numOfVertex; b++)
         {
-            if(!visit[b] && ((d[a] + adj[a][b]) < d[b]))
+            if(!visit[b] && ((d[a] + dist(a,b)) < d[b]))
             {
-                d[b] = d[a] + adj[a][b];
+                d[b] = d[a] + dist(a,b);
                 parent[b] = a;
+                //cout<<b<<" "<<a<<endl;
             }
         }
     }
 }
 
-void find_path(int x)   // パ癬翴x翴程祏隔畖
+void find_path(int x)
 {
     if(x!=0)
     {
-        if (x != parent[x]) // рぇ玡隔畖常ㄓ
+        if (x != parent[x])
         find_path(parent[x]);
         step++;
-        trail.push(x);
+        //trail.push(x);
         Clean[x]=true;
+    }
+}
+
+void find_path_iter(int x)
+{
+    int next;
+    if(x!=0)
+    {
+        s.push(x);
+        step++;
+        Clean[x]=true;
+        while(!s.empty() && x!=parent[x])
+        {
+            step++;
+            Clean[x]=true;
+            next=parent[s.top()];
+            s.pop();
+            if(parent[s.top()]!=0)
+            {
+                next=parent[s.top()];
+                cout<<next<<" ";
+                s.push(next);
+            }
+        }
     }
 }
 
@@ -110,41 +147,58 @@ void O_find_path(int x)   // パ癬翴x翴程祏隔畖
     if(x!=0)
     {
         if (x != parent[x]) // рぇ玡隔畖常ㄓ
-        O_find_path(parent[x]);
+        {
+            O_find_path(parent[x]);
+        }
         step++;
-        trail.push(x);
+        //trail.push(x);
         Clean[x]=true;
+        cout << Location[x] << endl;
         fout << Location[x] << endl;  // р瞷竚ㄓ
     }
 }
 
-void goBack()
+void goBack(int x)
 {
-    trail.pop();
-    while(!trail.empty())
+    if(x!=0)
     {
-        //cout<<Location[trail.top()]<<endl;
-        trail.pop();
-        step++;
+        if (x != parent[x] ) // рぇ玡隔畖常ㄓ
+        {
+            if(x==position)
+            {
+                goBack(parent[x]);
+            }
+            else
+            {
+                goBack(parent[x]);
+                step++;
+            }
+        }
+        Clean[x]=true;
     }
-    RobotBattery = battery;
-    step++;
-    return;
 }
 
-void O_goBack()
+void O_goBack(int x)
 {
-    trail.pop();
-    while(!trail.empty())
+    if(x!=0)
     {
-        fout<<Location[trail.top()]<<endl;
-        trail.pop();
+        if (x != parent[x] ) // рぇ玡隔畖常ㄓ
+        {
+            if(x==position)
+            {
+                O_goBack(parent[x]);
+            }
+            else
+            {
+                cout<< Location[x] << endl;
+                fout << Location[x] << endl;
+                O_goBack(parent[x]);
+            }
+        }
         step++;
+        //trail.push(x);
+        Clean[x]=true;
     }
-    fout<<Location[BatteryNum]<<endl;
-    RobotBattery = battery;
-    step++;
-    return;
 }
 
 void initAdj()
@@ -160,7 +214,18 @@ void initAdj()
     return ;
 }
 
-void BuildAdj()
+void initRuld()
+{
+    for(int i=1;i<=numOfVertex;i++)
+    {
+        for(int j=0;j<4;j++)
+        {
+            ruld[i][j]=-1;
+        }
+    }
+}
+
+void Buildadj_plus()
 {
     for(int i=0; i<row; i++)
     {
@@ -174,184 +239,224 @@ void BuildAdj()
                     {
                         if(transMatrix[i][j+1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                            adj[transMatrix[i][j]][0]=1;
+                            ruld[transMatrix[i][j]][0]=transMatrix[i][j+1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                            adj[transMatrix[i][j]][0]=1000000;
+                            ruld[transMatrix[i][j]][0]=-1;
                         }
                         if(transMatrix[i+1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                            adj[transMatrix[i][j]][3]=1;
+                            ruld[transMatrix[i][j]][3]=transMatrix[i+1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1000000;
+                            adj[transMatrix[i][j]][3]=1000000;
+                            ruld[transMatrix[i][j]][3]=-1;
                         }
                     }
                     else if(i==0&&j==col-1) //
                     {
                         if(transMatrix[i][j-1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1;
+                            adj[transMatrix[i][j]][2]=1;
+                            ruld[transMatrix[i][j]][2]=transMatrix[i][j-1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1000000;
+                            adj[transMatrix[i][j]][2]=1000000;
+                            ruld[transMatrix[i][j]][2]=-1;
                         }
                         if(transMatrix[i+1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                            adj[transMatrix[i][j]][3]=1;
+                            ruld[transMatrix[i][j]][3]=transMatrix[i+1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1000000;
+                            adj[transMatrix[i][j]][3]=1000000;
+                            ruld[transMatrix[i][j]][3]=-1;
                         }
                     }
                     else if(i==row-1&&col==0) //オ
                     {
                         if(transMatrix[i-1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
+                            adj[transMatrix[i][j]][1]=1;
+                            ruld[transMatrix[i][j]][1]=transMatrix[i-1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1000000;
+                            adj[transMatrix[i][j]][1]=1000000;
+                            ruld[transMatrix[i][j]][1]=-1;
                         }
                         if(transMatrix[i][j+1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                            adj[transMatrix[i][j]][0]=1;
+                            ruld[transMatrix[i][j]][0]=transMatrix[i][j+1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                            adj[transMatrix[i][j]][0]=1000000;
+                            ruld[transMatrix[i][j]][0]=-1;
                         }
                     }
                     else if(i==row-1&&j==col-1) //
                     {
                         if(transMatrix[i-1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
+                            adj[transMatrix[i][j]][1]=1;
+                            ruld[transMatrix[i][j]][1]=transMatrix[i-1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1000000;
+                            adj[transMatrix[i][j]][1]=1000000;
+                            ruld[transMatrix[i][j]][1]=-1;
                         }
                         if(transMatrix[i][j-1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1;
+                            adj[transMatrix[i][j]][2]=1;
+                            ruld[transMatrix[i][j]][2]=transMatrix[i][j-1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1000000;
+                            adj[transMatrix[i][j]][2]=1000000;
+                            ruld[transMatrix[i][j]][2]=-1;
                         }
                     }
                     else if(i==0)
                     {
                         if(transMatrix[i][j+1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                            adj[transMatrix[i][j]][0]=1;
+                            ruld[transMatrix[i][j]][0]=transMatrix[i][j+1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                            adj[transMatrix[i][j]][0]=1000000;
+                            ruld[transMatrix[i][j]][0]=-1;
                         }
                         if(transMatrix[i+1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                            adj[transMatrix[i][j]][3]=1;
+                            ruld[transMatrix[i][j]][3]=transMatrix[i+1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1000000;
+                            adj[transMatrix[i][j]][3]=1000000;
+                            ruld[transMatrix[i][j]][3]=-1;
                         }
                         if(transMatrix[i][j-1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1;
+                            adj[transMatrix[i][j]][2]=1;
+                            ruld[transMatrix[i][j]][2]=transMatrix[i][j-1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1000000;
+                            adj[transMatrix[i][j]][2]=1000000;
+                            ruld[transMatrix[i][j]][2]=-1;
                         }
                     }
                     else if(i==row-1)
                     {
                         if(transMatrix[i][j-1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1;
+                            adj[transMatrix[i][j]][2]=1;
+                            ruld[transMatrix[i][j]][2]=transMatrix[i][j-1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j-1]]=1000000;
+                            adj[transMatrix[i][j]][2]=1000000;
+                            ruld[transMatrix[i][j]][2]=-1;
                         }
                         if(transMatrix[i][j+1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                            adj[transMatrix[i][j]][0]=1;
+                            ruld[transMatrix[i][j]][0]=transMatrix[i][j+1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                            adj[transMatrix[i][j]][0]=1000000;
+                            ruld[transMatrix[i][j]][0]=-1;
                         }
                         if(transMatrix[i-1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
+                            adj[transMatrix[i][j]][1]=1;
+                            ruld[transMatrix[i][j]][1]=transMatrix[i-1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1000000;
+                            adj[transMatrix[i][j]][1]=1000000;
+                            ruld[transMatrix[i][j]][1]=-1;
                         }
                     }
                     else if(j==0)
                     {
                         if(transMatrix[i-1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
+                            adj[transMatrix[i][j]][1]=1;
+                            ruld[transMatrix[i][j]][1]=transMatrix[i-1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1000000;
+                            adj[transMatrix[i][j]][1]=1000000;
+                            ruld[transMatrix[i][j]][1]=-1;
                         }
                         if(transMatrix[i][j+1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                            adj[transMatrix[i][j]][0]=1;
+                            ruld[transMatrix[i][j]][0]=transMatrix[i][j+1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                            adj[transMatrix[i][j]][0]=1000000;
+                            ruld[transMatrix[i][j]][0]=-1;
                         }
                         if(transMatrix[i+1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                            adj[transMatrix[i][j]][3]=1;
+                            ruld[transMatrix[i][j]][3]=transMatrix[i+1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1000000;
+                            adj[transMatrix[i][j]][3]=1000000;
+                            ruld[transMatrix[i][j]][3]=-1;
                         }
                     }
                     else if(j==col-1)
                     {
                         if(transMatrix[i-1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
+                            adj[transMatrix[i][j]][1]=1;
+                            ruld[transMatrix[i][j]][1]=transMatrix[i-1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i-1][j]]=1000000;
+                            adj[transMatrix[i][j]][1]=1000000;
+                            ruld[transMatrix[i][j]][1]=-1;
                         }
                         if(transMatrix[i+1][j]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                            adj[transMatrix[i][j]][3]=1;
+                            ruld[transMatrix[i][j]][3]=transMatrix[i+1][j];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i+1][j]]=1000000;
+                            adj[transMatrix[i][j]][3]=1000000;
+                            ruld[transMatrix[i][j]][3]=-1;
                         }
                         if(transMatrix[i][j-1]!=0)
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                            adj[transMatrix[i][j]][2]=1;
+                            ruld[transMatrix[i][j]][2]=transMatrix[i][j-1];
                         }
                         else
                         {
-                            adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                            adj[transMatrix[i][j]][2]=1000000;
+                            ruld[transMatrix[i][j]][2]=-1;
                         }
                     }
                 }
@@ -359,42 +464,50 @@ void BuildAdj()
                 {
                     if(transMatrix[i][j+1]!=0)
                     {
-                        adj[transMatrix[i][j]][transMatrix[i][j+1]]=1;
+                        adj[transMatrix[i][j]][0]=1;
+                        ruld[transMatrix[i][j]][0]=transMatrix[i][j+1];
                     }
                     else
                     {
-                        adj[transMatrix[i][j]][transMatrix[i][j+1]]=1000000;
+                        adj[transMatrix[i][j]][0]=1000000;
+                        ruld[transMatrix[i][j]][0]=-1;
                     }
                     if(transMatrix[i][j-1]!=0)
                     {
-                        adj[transMatrix[i][j]][transMatrix[i][j-1]]=1;
+                        adj[transMatrix[i][j]][2]=1;
+                        ruld[transMatrix[i][j]][2]=transMatrix[i][j-1];
                     }
                     else
                     {
-                        adj[transMatrix[i][j]][transMatrix[i][j-1]]=1000000;
+                        adj[transMatrix[i][j]][2]=1000000;
+                        ruld[transMatrix[i][j]][2]=-1;
                     }
                     if(transMatrix[i+1][j]!=0)
                     {
-                        adj[transMatrix[i][j]][transMatrix[i+1][j]]=1;
+                        adj[transMatrix[i][j]][3]=1;
+                        ruld[transMatrix[i][j]][3]=transMatrix[i+1][j];
                     }
                     else
                     {
-                        adj[transMatrix[i][j]][transMatrix[i+1][j]]=1000000;
+                        adj[transMatrix[i][j]][3]=1000000;
+                        ruld[transMatrix[i][j]][3]=-1;
                     }
                     if(transMatrix[i-1][j]!=0)
                     {
-                        adj[transMatrix[i][j]][transMatrix[i-1][j]]=1;
+                        adj[transMatrix[i][j]][1]=1;
+                        ruld[transMatrix[i][j]][1]=transMatrix[i-1][j];
+
                     }
                     else
                     {
-                        adj[transMatrix[i][j]][transMatrix[i-1][j]]=1000000;
+                        adj[transMatrix[i][j]][1]=1000000;
+                        ruld[transMatrix[i][j]][1]=-1;
                     }
                 }
             }
         }
     }
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -453,24 +566,26 @@ int main(int argc, char *argv[])
     RobotBattery = battery;
     fin.close();
     //matrix finish
-    /*cout<<"Begin initializing Adj"<<endl;
-    initAdj();
-    cout<<"End initializing Adj"<<endl;*/
+    cout<<"Begin initializing Ruld"<<endl;
+    initRuld();
+    cout<<"End initializing Ruld"<<endl;
     cout<<"Begin building Adj"<<endl;
-    BuildAdj();
+    Buildadj_plus();
     cout<<"End building Adj"<<endl;
     cout<<"Begin Dijkstra"<<endl;
     Dijkstra(BatteryNum);
     cout<<"finished Dijkstra"<<endl;
     Clean[BatteryNum]=true;
+    cout<<"Begin finding path"<<endl;
     for(int i=1;i<=numOfVertex;i++)
     {
         if(!Clean[i])
         {
             find_path(i);
-            goBack();
+            goBack(i);
         }
     }
+    cout<<"End finding path"<<endl;
     fout<<step<<endl;
     initClean();
     Clean[BatteryNum]=true;
@@ -479,7 +594,10 @@ int main(int argc, char *argv[])
         if(!Clean[i])
         {
             O_find_path(i);
-            O_goBack();
+            position = i;
+            O_goBack(i);
+            cout<<Location[BatteryNum]<<endl;
+            fout<<Location[BatteryNum]<<endl;
         }
     }
     fout.close();
